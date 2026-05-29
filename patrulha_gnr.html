@@ -563,7 +563,7 @@ function onTokenFromPopup(e) {
   if (isOnline()) { showBanner('banner-sync', 'A sincronizar dados após renovação de sessão...'); sincronizarPendentes().then(() => setTimeout(() => hideBanner('banner-sync'), 3000)); }
 }
 
-const ARCGIS_TOKEN_ERRORS = [498, 499, 403];
+const ARCGIS_TOKEN_ERRORS = [498, 499];
 function isTokenError(r) {
   if (!r) return false;
   if (ARCGIS_TOKEN_ERRORS.includes(r?.error?.code)) return true;
