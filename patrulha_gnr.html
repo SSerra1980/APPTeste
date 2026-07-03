@@ -259,6 +259,32 @@
     }
     .meta-row { display: flex; justify-content: space-between; }
     .meta-val { color: var(--gold); font-family: 'Barlow Condensed', sans-serif; }
+    .btn-emergency {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #c0392b 0%, #e74c3c 100%);
+      color: white;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      box-shadow: 0 4px 15px rgba(231,76,60,0.4);
+      animation: pulse-red 2s infinite;
+    }
+    .btn-emergency:active { transform: scale(0.97); }
+    @keyframes pulse-red {
+      0%, 100% { box-shadow: 0 4px 15px rgba(231,76,60,0.4); }
+      50%       { box-shadow: 0 4px 25px rgba(231,76,60,0.8); }
+    }
     .logout-btn {
       background: transparent;
       border: 1px solid var(--navy-border);
@@ -524,6 +550,11 @@
   <div class="screen" id="screen-activa">
     <div class="scroll-area">
 
+      <button class="btn-emergency" onclick="enviarEmergenciaWhatsApp()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+        🆘 EMERGÊNCIA
+      </button>
+
       <div class="status-bar">
         <div class="status-left">
           <div class="pulse-ring"></div>
@@ -540,17 +571,7 @@
         </div>
       </div>
 
-      <!-- BOTÕES MEDIA -->
-      <div class="media-btn-row">
-        <button class="btn-media foto" onclick="abrirModalMedia('foto')">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 15.2A3.2 3.2 0 0 1 8.8 12 3.2 3.2 0 0 1 12 8.8 3.2 3.2 0 0 1 15.2 12 3.2 3.2 0 0 1 12 15.2M12 7A5 5 0 0 0 7 12a5 5 0 0 0 5 5 5 5 0 0 0 5-5 5 5 0 0 0-5-5m0-1l1.5-2.5h-3L12 6m-7 2H3v12h18V8h-2l-1.5-2.5h-11L5 8z"/></svg>
-          Fotografia
-        </button>
-        <button class="btn-media video" onclick="abrirModalMedia('video')">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
-          Vídeo
-        </button>
-      </div>
+
 
       <div class="info-grid">
         <div class="info-tile"><div class="tile-label">Grupo</div><div class="tile-value" id="info-grupo" style="font-size:12px">—</div></div>
@@ -1504,6 +1525,51 @@ async function arquivarMediaPatrulha(objectId) {
       features: JSON.stringify(updates)
     });
   } catch(e) { console.warn('Erro ao arquivar media:', e); }
+}
+
+// ════════════════════════════════════════════
+// BOTÃO DE EMERGÊNCIA — WhatsApp
+// ════════════════════════════════════════════
+function enviarEmergenciaWhatsApp() {
+  const numero = '351963191352';
+
+  const agora = new Date().toLocaleString('pt-PT');
+  const lat   = lastPos ? lastPos.lat.toFixed(6) : 'Sem GPS';
+  const lon   = lastPos ? lastPos.lon.toFixed(6) : 'Sem GPS';
+  const mapsUrl = lastPos
+    ? `https://maps.google.com/?q=${lastPos.lat},${lastPos.lon}`
+    : 'Posição indisponível';
+
+  const grupo      = patrulha?.grupo      || '—';
+  const subunidade = patrulha?.subunidade || '—';
+  const indicativo = patrulha?.indicativo || '—';
+  const idPatrulha = patrulha?.idpatrulha || '—';
+  const tipo       = patrulha?.tipo       || '—';
+
+  const mensagem =
+    `🆘 *EMERGÊNCIA — SIGOP/UCCF*
+
+` +
+    `👮 *Patrulha:* ${idPatrulha}
+` +
+    `🏢 *Grupo:* ${grupo}
+` +
+    `📍 *Subunidade:* ${subunidade}
+` +
+    `📻 *Indicativo:* ${indicativo}
+` +
+    `🚔 *Tipo:* ${tipo}
+
+` +
+    `📍 *Posição:* ${lat}, ${lon}
+` +
+    `🗺 *Mapa:* ${mapsUrl}
+
+` +
+    `🕐 *Data/Hora:* ${agora}`;
+
+  const url = `https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`;
+  window.open(url, '_blank');
 }
 </script>
 </body>
