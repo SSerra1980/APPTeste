@@ -1568,8 +1568,17 @@ function enviarEmergenciaWhatsApp() {
 ` +
     `🕐 *Data/Hora:* ${agora}`;
 
-  const url = `https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`;
-  window.location.href = url;
+  const texto = encodeURIComponent(mensagem);
+
+  // Android Intent URL — abre directamente o WhatsApp sem passar pelo browser
+  const intentUrl = `intent://send?phone=${numero}&text=${texto}#Intent;scheme=whatsapp;package=com.whatsapp;S.browser_fallback_url=https%3A%2F%2Fwa.me%2F${numero}%3Ftext%3D${texto};end`;
+
+  // Criar link e clicar
+  const a = document.createElement('a');
+  a.href = intentUrl;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => document.body.removeChild(a), 1000);
 }
 </script>
 </body>
