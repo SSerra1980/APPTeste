@@ -1530,7 +1530,7 @@ async function arquivarMediaPatrulha(objectId) {
 // ════════════════════════════════════════════
 // BOTÃO DE EMERGÊNCIA — WhatsApp
 // ════════════════════════════════════════════
-async function enviarEmergenciaWhatsApp() {
+function enviarEmergenciaWhatsApp() {
   const numero = '351927781335';
 
   const agora = new Date().toLocaleString('pt-PT');
@@ -1568,27 +1568,9 @@ async function enviarEmergenciaWhatsApp() {
 ` +
     `🕐 *Data/Hora:* ${agora}`;
 
-  // Método 1: Web Share API (nativa Android — abre menu de partilha do sistema)
-  if (navigator.share) {
-    try {
-      await navigator.share({
-        title: '🆘 EMERGÊNCIA SIGOP/UCCF',
-        text: mensagem
-      });
-      return;
-    } catch(e) {
-      if (e.name === 'AbortError') return; // utilizador cancelou
-    }
-  }
-
-  // Método 2: Fallback — copiar mensagem e mostrar instruções
-  try {
-    await navigator.clipboard.writeText(mensagem);
-    alert('Mensagem copiada!\n\nAbra o WhatsApp manualmente e cole a mensagem para o número:\n+351 927 781 335');
-  } catch(e) {
-    // Método 3: Mostrar mensagem em modal
-    alert('Contacte urgentemente:\n+351 927 781 335\n\n' + mensagem);
-  }
+  // SMS — esquema nativo suportado em todos os browsers Android
+  const smsUrl = `sms:+351927781335?body=${encodeURIComponent(mensagem)}`;
+  window.location.href = smsUrl;
 }
 </script>
 </body>
