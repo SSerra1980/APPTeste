@@ -1592,6 +1592,46 @@ function enviarEmergenciaWhatsApp() {
   const smsUrl = `sms:+351927781335?body=${encodeURIComponent(mensagem)}`;
   window.location.href = smsUrl;
 }
+
+// ════════════════════════════════════════════
+// MODAL DE EMERGÊNCIA
+// ════════════════════════════════════════════
+function abrirModalEmergencia() {
+  const agora   = new Date().toLocaleString('pt-PT');
+  const lat     = lastPos ? lastPos.lat.toFixed(6) : 'Sem GPS';
+  const lon     = lastPos ? lastPos.lon.toFixed(6) : 'Sem GPS';
+  const mapsUrl = lastPos
+    ? 'https://maps.google.com/?q=' + lastPos.lat + ',' + lastPos.lon
+    : 'Posicao indisponivel';
+
+  const msg =
+    'EMERGENCIA SIGOP/UCCF\n' +
+    'Patrulha: '   + (patrulha?.idpatrulha || '-') + '\n' +
+    'Grupo: '      + (patrulha?.grupo       || '-') + '\n' +
+    'Subunidade: ' + (patrulha?.subunidade  || '-') + '\n' +
+    'Indicativo: ' + (patrulha?.indicativo  || '-') + '\n' +
+    'Tipo: '       + (patrulha?.tipo        || '-') + '\n' +
+    'Posicao: '    + lat + ', ' + lon + '\n' +
+    'Mapa: '       + mapsUrl + '\n' +
+    'Data/Hora: '  + agora;
+
+  document.getElementById('emerg-info').textContent = msg;
+  window._emergMsg = msg;
+  document.getElementById('modal-emergencia').style.display = 'flex';
+}
+
+function fecharModalEmergencia() {
+  document.getElementById('modal-emergencia').style.display = 'none';
+}
+
+async function copiarEmergencia() {
+  try {
+    await navigator.clipboard.writeText(window._emergMsg || '');
+    alert('Mensagem copiada! Cole no SMS ou WhatsApp para o numero +351 927 781 335');
+  } catch(e) {
+    alert('Mensagem:\n\n' + (window._emergMsg || ''));
+  }
+}
 </script>
 </body>
 </html>
