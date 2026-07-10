@@ -338,22 +338,42 @@ require([
   // ══════════ AUTENTICAÇÃO AUTOMÁTICA via IdentityManager (evita CORS) ══════════
   function autenticar() {
     return new Promise((resolve) => {
-      esriId.generateToken(
-        PORTAL_URL + "/sharing/rest",
-        { username: AUTH_USER, password: AUTH_PASS }
-      ).then((resp) => {
-        dashboardToken = resp.token;
-        esriId.registerToken({
-          server: "https://services5.arcgis.com/j4eW900wJsR0Vv9G/arcgis/rest/services",
-          token: resp.token,
-          expires: resp.expires,
-          userId: AUTH_USER
-        });
-        resolve(true);
-      }).catch((err) => {
-        console.error("Falha na autenticação:", err);
-        resolve(false);
+      // Usar JSONP via script tag — contorna CORS totalmente
+      const callbackName = "sicopAuthCallback_" + Date.now();
+      const params = new URLSearchParams({
+        username: AUTH_USER,
+        password: AUTH_PASS,
+        client: "referer",
+        referer: window.location.origin,
+        expiration: "20160",
+        f: "json",
+        callback: callbackName
       });
+
+      window[callbackName] = function(data) {
+        delete window[callbackName];
+        document.getElementById(callbackName)?.remove();
+
+        if (data.token) {
+          dashboardToken = data.token;
+          esriId.registerToken({
+            server: "https://services5.arcgis.com/j4eW900wJsR0Vv9G/arcgis/rest/services",
+            token: data.token,
+            expires: Date.now() + (20160 * 60000),
+            userId: AUTH_USER
+          });
+          resolve(true);
+        } else {
+          console.error("Falha na autenticação:", data.error);
+          resolve(false);
+        }
+      };
+
+      const script = document.createElement("script");
+      script.id = callbackName;
+      script.src = PORTAL_URL + "/sharing/rest/generateToken?" + params.toString();
+      script.onerror = () => { console.error("Erro ao carregar script de auth"); resolve(false); };
+      document.body.appendChild(script);
     });
   }
 
