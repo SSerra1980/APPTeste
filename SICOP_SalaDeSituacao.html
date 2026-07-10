@@ -333,41 +333,34 @@ require([
   const REFRESH_MS = 5000;
 
   let dashboardToken = null;
+  const CLIENT_ID = "faS9CWn1NG97e2R8";
 
-  // ══════════ AUTENTICAÇÃO AUTOMÁTICA via IdentityManager (evita CORS) ══════════
-  function autenticar() {
-    return new Promise((resolve) => {
-      const callbackName = "sicopAuthCallback_" + Date.now();
-      const params = new URLSearchParams({
-        username: AUTH_USER,
-        password: AUTH_PASS,
-        client: "referer",
-        referer: window.location.origin,
-        expiration: "20160",
-        f: "json",
-        callback: callbackName
+  // ══════════ AUTENTICAÇÃO via CORS-enabled generateToken (usando Client ID da app registada) ══════════
+  async function autenticar() {
+    try {
+      const res = await fetch(PORTAL_URL + "/sharing/rest/generateToken", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          username: AUTH_USER,
+          password: AUTH_PASS,
+          client: "referer",
+          referer: window.location.origin,
+          expiration: "20160",
+          f: "json"
+        })
       });
-
-      window[callbackName] = function(data) {
-        delete window[callbackName];
-        const s = document.getElementById(callbackName);
-        if (s) s.remove();
-
-        if (data && data.token) {
-          dashboardToken = data.token;
-          resolve(true);
-        } else {
-          console.error("Falha na autenticação:", data && data.error);
-          resolve(false);
-        }
-      };
-
-      const script = document.createElement("script");
-      script.id = callbackName;
-      script.src = PORTAL_URL + "/sharing/rest/generateToken?" + params.toString();
-      script.onerror = () => { console.error("Erro ao carregar script de auth"); resolve(false); };
-      document.body.appendChild(script);
-    });
+      const data = await res.json();
+      if (data && data.token) {
+        dashboardToken = data.token;
+        return true;
+      }
+      console.error("Falha na autenticação:", data && data.error);
+      return false;
+    } catch(e) {
+      console.error("Erro de autenticação:", e);
+      return false;
+    }
   }
 
   // ── Renderer: verde = activa, vermelho pulsante = emergência ──
