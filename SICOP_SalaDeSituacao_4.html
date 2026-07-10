@@ -323,9 +323,8 @@ require([
   "esri/views/MapView",
   "esri/layers/FeatureLayer",
   "esri/renderers/UniqueValueRenderer",
-  "esri/symbols/SimpleMarkerSymbol",
-  "esri/identity/IdentityManager"
-], function(Map, MapView, FeatureLayer, UniqueValueRenderer, SimpleMarkerSymbol, esriId) {
+  "esri/symbols/SimpleMarkerSymbol"
+], function(Map, MapView, FeatureLayer, UniqueValueRenderer, SimpleMarkerSymbol) {
 
   const PORTAL_URL        = "https://sgmai.maps.arcgis.com";
   const FEATURE_LAYER_URL = "https://services5.arcgis.com/j4eW900wJsR0Vv9G/arcgis/rest/services/APP_Teste_SSerra/FeatureServer/0";
@@ -338,7 +337,6 @@ require([
   // ══════════ AUTENTICAÇÃO AUTOMÁTICA via IdentityManager (evita CORS) ══════════
   function autenticar() {
     return new Promise((resolve) => {
-      // Usar JSONP via script tag — contorna CORS totalmente
       const callbackName = "sicopAuthCallback_" + Date.now();
       const params = new URLSearchParams({
         username: AUTH_USER,
@@ -352,19 +350,14 @@ require([
 
       window[callbackName] = function(data) {
         delete window[callbackName];
-        document.getElementById(callbackName)?.remove();
+        const s = document.getElementById(callbackName);
+        if (s) s.remove();
 
-        if (data.token) {
+        if (data && data.token) {
           dashboardToken = data.token;
-          esriId.registerToken({
-            server: "https://services5.arcgis.com/j4eW900wJsR0Vv9G/arcgis/rest/services",
-            token: data.token,
-            expires: Date.now() + (20160 * 60000),
-            userId: AUTH_USER
-          });
           resolve(true);
         } else {
-          console.error("Falha na autenticação:", data.error);
+          console.error("Falha na autenticação:", data && data.error);
           resolve(false);
         }
       };
@@ -405,30 +398,7 @@ require([
     ]
   });
 
-  const patrulhasLayer = new FeatureLayer({
-    url: FEATURE_LAYER_URL,
-    definitionExpression: "estado <> 'terminada' AND estado <> 'cancelada'",
-    renderer: renderer,
-    outFields: ["*"],
-    popupTemplate: {
-      title: "{id_patrulha} — {indicativo_radio}",
-      content: [{
-        type: "fields",
-        fieldInfos: [
-          { fieldName: "grupo", label: "Grupo" },
-          { fieldName: "subunidade", label: "Subunidade" },
-          { fieldName: "tipo_patrulhamento", label: "Tipo" },
-          { fieldName: "estado", label: "Estado" },
-          { fieldName: "efetivo", label: "Efetivo" }
-        ]
-      }]
-    }
-  });
-
-  const map = new Map({
-    basemap: "dark-gray-vector",
-    layers: [patrulhasLayer]
-  });
+  const map = new Map({ basemap: "dark-gray-vector" });
 
   const view = new MapView({
     container: "viewDiv",
@@ -441,8 +411,30 @@ require([
 
   view.ui.move("zoom", "bottom-right");
 
-  // Autenticar imediatamente para o mapa carregar a camada correctamente
-  autenticar();
+  let patrulhasLayer = null;
+
+  function criarCamada() {
+    patrulhasLayer = new FeatureLayer({
+      url: FEATURE_LAYER_URL + "?token=" + encodeURIComponent(dashboardToken),
+      definitionExpression: "estado <> 'terminada' AND estado <> 'cancelada'",
+      renderer: renderer,
+      outFields: ["*"],
+      popupTemplate: {
+        title: "{id_patrulha} — {indicativo_radio}",
+        content: [{
+          type: "fields",
+          fieldInfos: [
+            { fieldName: "grupo", label: "Grupo" },
+            { fieldName: "subunidade", label: "Subunidade" },
+            { fieldName: "tipo_patrulhamento", label: "Tipo" },
+            { fieldName: "estado", label: "Estado" },
+            { fieldName: "efetivo", label: "Efetivo" }
+          ]
+        }]
+      }
+    });
+    map.add(patrulhasLayer);
+  }
 
   // ══════════ RELÓGIO ══════════
   function tickClock(){
@@ -488,7 +480,7 @@ require([
       renderSidebar(features);
 
       // Forçar refresh visual da camada no mapa
-      patrulhasLayer.refresh();
+      if (patrulhasLayer) patrulhasLayer.refresh();
 
     } catch(e){
       console.error("Erro ao obter patrulhas:", e);
@@ -586,7 +578,11 @@ require([
   }
 
   view.when(async () => {
-    await autenticar();
+    const ok = await autenticar();
+    if (ok) {
+      criarCamada();
+      setLiveStatus(true);
+    }
     fetchPatrulhas();
     setInterval(fetchPatrulhas, REFRESH_MS);
     // Renovar token a cada 12 horas
