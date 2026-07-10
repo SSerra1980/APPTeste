@@ -335,38 +335,32 @@ require([
 
   let dashboardToken = null;
 
-  // ══════════ AUTENTICAÇÃO AUTOMÁTICA ══════════
-  async function autenticar() {
-    try {
-      const res = await fetch(PORTAL_URL + "/sharing/rest/generateToken", {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-          username: AUTH_USER,
-          password: AUTH_PASS,
-          client: "referer",
-          referer: PORTAL_URL,
-          expiration: "20160",
-          f: "json"
-        })
-      });
-      const data = await res.json();
-      if (data.token) {
-        dashboardToken = data.token;
-        // Registar o token no IdentityManager para a camada do mapa o usar automaticamente
+  // ══════════ AUTENTICAÇÃO AUTOMÁTICA via IdentityManager (evita CORS) ══════════
+  function autenticar() {
+    return new Promise((resolve) => {
+      esriId.generateToken(
+        { server: PORTAL_URL },
+        { username: AUTH_USER, password: AUTH_PASS }
+      ).then((resp) => {
+        dashboardToken = resp.token;
         esriId.registerToken({
           server: "https://services5.arcgis.com/j4eW900wJsR0Vv9G/arcgis/rest/services",
-          token: data.token,
-          expires: Date.now() + (20160 * 60000)
+          token: resp.token,
+          expires: resp.expires,
+          userId: AUTH_USER
         });
-        return true;
-      }
-      console.error("Falha na autenticação:", data.error);
-      return false;
-    } catch(e) {
-      console.error("Erro de autenticação:", e);
-      return false;
-    }
+        esriId.registerToken({
+          server: PORTAL_URL,
+          token: resp.token,
+          expires: resp.expires,
+          userId: AUTH_USER
+        });
+        resolve(true);
+      }).catch((err) => {
+        console.error("Falha na autenticação:", err);
+        resolve(false);
+      });
+    });
   }
 
   // ── Renderer: verde = activa, vermelho pulsante = emergência ──
