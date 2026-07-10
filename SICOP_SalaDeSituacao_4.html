@@ -323,11 +323,51 @@ require([
   "esri/views/MapView",
   "esri/layers/FeatureLayer",
   "esri/renderers/UniqueValueRenderer",
-  "esri/symbols/SimpleMarkerSymbol"
-], function(Map, MapView, FeatureLayer, UniqueValueRenderer, SimpleMarkerSymbol) {
+  "esri/symbols/SimpleMarkerSymbol",
+  "esri/identity/IdentityManager"
+], function(Map, MapView, FeatureLayer, UniqueValueRenderer, SimpleMarkerSymbol, esriId) {
 
+  const PORTAL_URL        = "https://sgmai.maps.arcgis.com";
   const FEATURE_LAYER_URL = "https://services5.arcgis.com/j4eW900wJsR0Vv9G/arcgis/rest/services/APP_Teste_SSerra/FeatureServer/0";
+  const AUTH_USER = "GNR_Sserra";
+  const AUTH_PASS = "Ironmaiden_1980";
   const REFRESH_MS = 5000;
+
+  let dashboardToken = null;
+
+  // ══════════ AUTENTICAÇÃO AUTOMÁTICA ══════════
+  async function autenticar() {
+    try {
+      const res = await fetch(PORTAL_URL + "/sharing/rest/generateToken", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          username: AUTH_USER,
+          password: AUTH_PASS,
+          client: "referer",
+          referer: PORTAL_URL,
+          expiration: "20160",
+          f: "json"
+        })
+      });
+      const data = await res.json();
+      if (data.token) {
+        dashboardToken = data.token;
+        // Registar o token no IdentityManager para a camada do mapa o usar automaticamente
+        esriId.registerToken({
+          server: "https://services5.arcgis.com/j4eW900wJsR0Vv9G/arcgis/rest/services",
+          token: data.token,
+          expires: Date.now() + (20160 * 60000)
+        });
+        return true;
+      }
+      console.error("Falha na autenticação:", data.error);
+      return false;
+    } catch(e) {
+      console.error("Erro de autenticação:", e);
+      return false;
+    }
+  }
 
   // ── Renderer: verde = activa, vermelho pulsante = emergência ──
   const renderer = new UniqueValueRenderer({
@@ -393,6 +433,9 @@ require([
 
   view.ui.move("zoom", "bottom-right");
 
+  // Autenticar imediatamente para o mapa carregar a camada correctamente
+  autenticar();
+
   // ══════════ RELÓGIO ══════════
   function tickClock(){
     const now = new Date();
@@ -409,14 +452,26 @@ require([
 
   async function fetchPatrulhas(){
     try{
+      if (!dashboardToken) {
+        const ok = await autenticar();
+        if (!ok) { setLiveStatus(false); return; }
+      }
+
       const url = FEATURE_LAYER_URL + "/query?where=" +
         encodeURIComponent("estado <> 'terminada' AND estado <> 'cancelada'") +
-        "&outFields=*&f=json&resultRecordCount=200&orderByFields=estado DESC";
+        "&outFields=*&f=json&resultRecordCount=200&orderByFields=estado DESC" +
+        "&token=" + encodeURIComponent(dashboardToken);
 
       const res = await fetch(url);
       const data = await res.json();
 
-      if (data.error) throw new Error(data.error.message);
+      if (data.error) {
+        // Token expirado — reautenticar na próxima tentativa
+        if (data.error.code === 498 || data.error.code === 499) {
+          dashboardToken = null;
+        }
+        throw new Error(data.error.message);
+      }
 
       lastFetchOk = Date.now();
       setLiveStatus(true);
@@ -522,13 +577,12 @@ require([
     }).join("");
   }
 
-  view.when(() => {
+  view.when(async () => {
+    await autenticar();
     fetchPatrulhas();
     setInterval(fetchPatrulhas, REFRESH_MS);
-    // Refrescar tempos decorridos a cada 30s sem esperar por novo fetch
-    setInterval(() => {
-      document.querySelectorAll(".patrol-time").forEach(() => {});
-    }, 30000);
+    // Renovar token a cada 12 horas
+    setInterval(autenticar, 12 * 60 * 60 * 1000);
   });
 
 });
