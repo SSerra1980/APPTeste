@@ -346,22 +346,15 @@ require([
 
   // ══════════ AUTENTICAÇÃO OAuth2 (popup de login) ══════════
   function autenticar() {
-    return esriId.checkSignInStatus(PORTAL_URL + "/sharing")
+    return esriId.getCredential(PORTAL_URL + "/sharing")
       .then((credential) => {
         dashboardToken = credential.token;
+        console.log("Autenticado com sucesso");
         return true;
       })
-      .catch(() => {
-        // Não autenticado — abrir popup de login
-        return esriId.getCredential(PORTAL_URL + "/sharing")
-          .then((credential) => {
-            dashboardToken = credential.token;
-            return true;
-          })
-          .catch((err) => {
-            console.error("Falha na autenticação OAuth:", err);
-            return false;
-          });
+      .catch((err) => {
+        console.error("Falha na autenticação OAuth:", err);
+        return false;
       });
   }
 
