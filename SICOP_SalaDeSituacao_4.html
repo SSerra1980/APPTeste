@@ -339,18 +339,12 @@ require([
   function autenticar() {
     return new Promise((resolve) => {
       esriId.generateToken(
-        { server: PORTAL_URL },
+        PORTAL_URL + "/sharing/rest",
         { username: AUTH_USER, password: AUTH_PASS }
       ).then((resp) => {
         dashboardToken = resp.token;
         esriId.registerToken({
           server: "https://services5.arcgis.com/j4eW900wJsR0Vv9G/arcgis/rest/services",
-          token: resp.token,
-          expires: resp.expires,
-          userId: AUTH_USER
-        });
-        esriId.registerToken({
-          server: PORTAL_URL,
           token: resp.token,
           expires: resp.expires,
           userId: AUTH_USER
