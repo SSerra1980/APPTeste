@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="UTF-8">
+<title>Relógio Portugal</title>
+
+<style>
+html, body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: rgb(11,26,53);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+#clock {
+    color: #FFFFFF;
+    font-size: 30px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    white-space: nowrap;
+}
+</style>
+
+</head>
+<body>
+
+<div id="clock">00:00:00</div>
+
+<script>
+
+function atualizarRelogio() {
+
+    const agora = new Date();
+
+    const hora = new Intl.DateTimeFormat('pt-PT', {
+        timeZone: 'Europe/Lisbon',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+    }).format(agora);
+
+    document.getElementById("clock").textContent = hora;
+}
+
+atualizarRelogio();
+setInterval(atualizarRelogio, 1000);
+
+</script>
+
+</body>
+</html>
