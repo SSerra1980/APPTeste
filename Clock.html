@@ -19,23 +19,44 @@ html, body {
 
 #clock {
     color: #FFFFFF;
-    font-size: 30px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+#date {
+    font-size: 22px;
+    font-weight: normal;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+}
+
+#time {
+    font-size: 42px;
     font-weight: bold;
     letter-spacing: 2px;
-    white-space: nowrap;
 }
 </style>
 
 </head>
 <body>
 
-<div id="clock">00:00:00</div>
+<div id="clock">
+    <div id="date">14 de julho de 2026</div>
+    <div id="time">00:00:00</div>
+</div>
 
 <script>
 
 function atualizarRelogio() {
 
     const agora = new Date();
+
+    const data = new Intl.DateTimeFormat('pt-PT', {
+        timeZone: 'Europe/Lisbon',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+    }).format(agora);
 
     const hora = new Intl.DateTimeFormat('pt-PT', {
         timeZone: 'Europe/Lisbon',
@@ -45,7 +66,8 @@ function atualizarRelogio() {
         hour12: false
     }).format(agora);
 
-    document.getElementById("clock").textContent = hora;
+    document.getElementById("date").textContent = data;
+    document.getElementById("time").textContent = hora;
 }
 
 atualizarRelogio();
